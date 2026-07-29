@@ -160,6 +160,20 @@ jobs:
                 echo 'WARNING: checked-out HEAD does not match resolved hash (branch moved under us); continuing anyway'
               fi
 
+              echo '=== Patching stale UI asset check ==='
+              # The HF 'latest' llama-ui dist no longer ships loading.html (the
+              # web UI dropped it), but this fork's tools/ui/embed.cpp still
+              # lists it as a required asset, so llama-ui-embed aborts the build
+              # with: missing required asset(s): loading.html. Upstream
+              # ggml-org/llama.cpp already dropped loading.html from its required
+              # list; align here. Harmless no-op if the fork later catches up.
+              if grep -q '{ \"loading.html\",' tools/ui/embed.cpp; then
+                sed -i '/{ \"loading.html\",/d' tools/ui/embed.cpp
+                echo 'Patched: removed stale loading.html requirement from tools/ui/embed.cpp'
+              else
+                echo 'loading.html requirement already absent; no patch needed'
+              fi
+
               echo '=== Configuring build with Ninja ==='
               export LIBRARY_PATH=\"/usr/local/cuda/lib64/stubs\${LIBRARY_PATH:+:\$LIBRARY_PATH}\"
 
