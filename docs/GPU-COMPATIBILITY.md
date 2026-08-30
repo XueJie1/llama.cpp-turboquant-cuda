@@ -23,6 +23,14 @@ if torch.cuda.is_available():
 
 ## Compute Capability Breakdown
 
+### 6.1 (Pascal)
+- Tesla P40
+- NVIDIA P104-100
+- Titan Xp
+- GeForce GTX 10 series
+
+**CUDA Support:** 12.8 build only; shipped as a native SM61 cubin
+
 ### 7.5 (Turing)
 - Tesla T4
 - GeForce RTX 2060, 2070, 2080, 2080 Ti
@@ -92,6 +100,7 @@ nvidia-smi
 
 | GPU Architecture | Compute Cap. | CUDA 12.4 | CUDA 12.6 | CUDA 12.8 | CUDA 12.9 | CUDA 13.0 |
 |-----------------|--------------|-----------|-----------|-----------|-----------|-----------|
+| Pascal          | 6.1          | ✅        | ✅        | ✅        | ✅        | ❌        |
 | Turing          | 7.5          | ✅        | ✅        | ✅        | ✅        | ✅        |
 | Ampere (DC)     | 8.0          | ✅        | ✅        | ✅        | ✅        | ✅        |
 | Ampere          | 8.6          | ✅        | ✅        | ✅        | ✅        | ✅        |

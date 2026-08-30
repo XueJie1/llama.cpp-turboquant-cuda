@@ -4,7 +4,7 @@ Get up and running with llama.cpp CUDA binaries in 5 minutes.
 
 ## Prerequisites
 
-1. NVIDIA GPU (compute capability 7.5 or higher)
+1. NVIDIA GPU (compute capability 6.1 or higher)
 2. NVIDIA driver installed (check with `nvidia-smi`)
 3. Linux x86_64 system (Ubuntu 22.04 or compatible)
 
@@ -14,7 +14,7 @@ Get up and running with llama.cpp CUDA binaries in 5 minutes.
 nvidia-smi --query-gpu=name,compute_cap --format=csv
 ```
 
-This shows your GPU name and compute capability. Make sure it's 7.5 or higher.
+This shows your GPU name and compute capability. Make sure it's 6.1 or higher.
 
 ## Step 2: Check Your Driver
 

@@ -91,9 +91,10 @@ jobs:
           - cuda_version: '12.8.1'
             cuda_version_short: '12.8'
             cuda_tag: '12.8.1-cudnn-devel-ubuntu22.04'
-            # CUDA 12.8 nvcc covers Turing through Blackwell. Same list applies
-            # regardless of host arch since compute capability targets the GPU.
-            architectures: '75-virtual;80-virtual;86-virtual;89-virtual;90-virtual;100-virtual;120-virtual'
+            nccl_version: '2.26.2-1+cuda12.8'
+            # Keep Pascal as a native cubin: a compute_75 PTX fallback cannot
+            # execute on sm_61 devices such as P40 and P104-100.
+            architectures: '61-real;75-virtual;80-virtual;86-virtual;89-virtual;90-virtual;100-virtual;120-virtual'
 
     steps:
       - name: Checkout
@@ -145,7 +146,10 @@ jobs:
 
               echo '=== Installing minimal dependencies ==='
               apt-get update -qq
-              apt-get install -y --no-install-recommends git cmake ninja-build build-essential libssl-dev ca-certificates
+              apt-get install -y --no-install-recommends \
+                git cmake ninja-build build-essential libssl-dev ca-certificates \
+                'libnccl2=${{ matrix.nccl_version }}' \
+                'libnccl-dev=${{ matrix.nccl_version }}'
               apt-get clean
               rm -rf /var/lib/apt/lists/*
 
@@ -181,6 +185,7 @@ jobs:
               cmake -B build -S . \
                 -G Ninja \
                 -DGGML_CUDA=ON \
+                -DGGML_CUDA_NCCL=ON \
                 -DCMAKE_CUDA_ARCHITECTURES='${{ matrix.architectures }}' \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DBUILD_SHARED_LIBS=ON \
@@ -188,11 +193,15 @@ jobs:
                 -DLLAMA_BUILD_TESTS=OFF \
                 -DLLAMA_BUILD_EXAMPLES=OFF \
                 -DGGML_CUDA_FA_ALL_QUANTS=ON \
+                -DCMAKE_BUILD_RPATH='\$ORIGIN' \
                 -DCMAKE_EXE_LINKER_FLAGS='-Wl,-rpath-link,/usr/local/cuda/lib64/stubs' \
                 -DCMAKE_SHARED_LINKER_FLAGS='-Wl,-rpath-link,/usr/local/cuda/lib64/stubs'
 
               echo '=== Building with Ninja (parallel: all cores) ==='
               cmake --build build --config Release -j\$(nproc)
+
+              echo '=== Verifying NCCL support ==='
+              readelf -d build/bin/libggml-cuda.so | grep -F 'Shared library: [libnccl.so.2]'
 
               echo '=== Copying binaries ==='
               cd /workspace
@@ -200,6 +209,15 @@ jobs:
 
               # Copy everything from build/bin
               cp -r llama.cpp-turboquant/build/bin/* binaries/cuda-${{ matrix.cuda_version_short }}/
+
+              # Bundle the CUDA 12.8 NCCL runtime. Arch and other rolling
+              # distributions may ship a system NCCL linked to CUDA 13, which
+              # cannot satisfy this CUDA 12.8 build.
+              cp -L /usr/lib/x86_64-linux-gnu/libnccl.so.2 \
+                binaries/cuda-${{ matrix.cuda_version_short }}/libnccl.so.2
+
+              readelf -d binaries/cuda-${{ matrix.cuda_version_short }}/libggml-cuda.so | \
+                grep -E '(RPATH|RUNPATH).*ORIGIN'
 
               # Strip binaries to reduce size (executables only, not .so files)
               find binaries/cuda-${{ matrix.cuda_version_short }}/ -type f -executable ! -name \"*.so*\" -exec strip {} \; 2>/dev/null || true
@@ -212,6 +230,7 @@ jobs:
               echo 'commit_date: ${{ needs.check-release.outputs.commit_date }}' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
               echo 'release_tag: ${{ needs.check-release.outputs.release_tag }}' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
               echo 'CUDA version: ${{ matrix.cuda_version }}' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
+              echo 'NCCL version: ${{ matrix.nccl_version }} (bundled)' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
               echo 'Architectures: ${{ matrix.architectures }}' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
               echo 'Build date: ${{ needs.check-release.outputs.build_date }}' >> binaries/cuda-${{ matrix.cuda_version_short }}/VERSION.txt
 
@@ -313,7 +332,9 @@ jobs:
             ## Build details
             - Host arch: x86_64 (amd64), Linux
             - CUDA version: 12.8.1
-            - GPU compute capabilities: 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 12.0
+            - NCCL version: 2.26.2-1+cuda12.8 (bundled)
+            - GPU compute capabilities: 6.1, 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 12.0
+              - 6.1: Tesla P40, P104-100, Titan Xp, GTX 10xx series
               - 7.5: Tesla T4, RTX 20xx series, Quadro RTX
               - 8.0: A100
               - 8.6: RTX 3000 series
@@ -328,8 +349,9 @@ jobs:
             ./cuda-12.8/llama-cli --help
             ./cuda-12.8/llama-server
             ```
-            CUDA runtime is not bundled; install a CUDA 12.8-compatible driver
-            on the host (>= 570.x).
+            NCCL is bundled and loaded from the extracted directory. The CUDA
+            runtime is not bundled; install CUDA 12.8 and a compatible NVIDIA
+            driver on the host (>= 570.x).
           files: release-assets/*
           draft: false
           prerelease: false

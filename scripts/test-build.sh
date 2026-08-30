@@ -30,7 +30,7 @@ case $CUDA_VERSION in
         ;;
     12.8.1)
         CUDA_TAG="12.8.1-cudnn-devel-ubuntu22.04"
-        ARCHITECTURES="75;80;86;89;90;100;120"
+        ARCHITECTURES="61-real;75-virtual;80-virtual;86-virtual;89-virtual;90-virtual;100-virtual;120-virtual"
         ;;
     12.9.1)
         CUDA_TAG="12.9.1-cudnn-devel-ubuntu22.04"

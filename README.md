@@ -6,7 +6,8 @@ This repository automatically builds [llama.cpp-turboquant](https://github.com/T
 
 The llama.cpp-turboquant project only ships macOS (Metal) and Windows (CUDA) binaries in its own releases - there is no Linux CUDA build. This repository fills that gap by:
 
-- Building llama.cpp-turboquant with CUDA support for a wide range of NVIDIA GPU architectures (compute capability 7.5+)
+- Building llama.cpp-turboquant with CUDA support for a wide range of NVIDIA GPU architectures (compute capability 6.1+)
+- Enabling NCCL for tensor-parallel and multi-GPU workloads, with a CUDA 12.8-compatible NCCL runtime bundled in each release
 - Automatically tracking the `feature/turboquant-kv-cache` branch of the upstream fork
 - Providing ready-to-use Linux x86_64 binaries via GitHub Releases
 
@@ -25,6 +26,7 @@ The build targets the following GPU compute capabilities (same on the host):
 
 | Compute Capability | GPU Examples |
 |-------------------|--------------|
+| 6.1 | Tesla P40, P104-100, Titan Xp, GTX 10xx series |
 | 7.5 | Tesla T4, RTX 2000 series, Quadro RTX |
 | 8.0 | A100 |
 | 8.6 | RTX 3000 series |
@@ -32,6 +34,22 @@ The build targets the following GPU compute capabilities (same on the host):
 | 9.0 | H100, H200, GH200 |
 | 10.0 | B200, GB200 |
 | 12.0 | RTX Pro series, RTX 5000 series |
+
+The SM61 target is shipped as a native cubin. Pascal GPUs therefore do not rely
+on a newer-architecture PTX fallback that they cannot execute.
+
+### Multi-GPU and NCCL
+
+The release explicitly enables `GGML_CUDA_NCCL` and bundles
+`libnccl.so.2` built for CUDA 12.8. This avoids accidentally loading a host NCCL
+package linked to CUDA 13. Layer, row, and experimental tensor splitting remain
+available through llama.cpp's standard options:
+
+```bash
+./llama-cli --list-devices
+./llama-cli -m model.gguf -ngl all -sm layer
+./llama-cli -m model.gguf -ngl all -sm tensor -ts 1,1
+```
 
 ## Usage
 
@@ -73,8 +91,8 @@ cat VERSION.txt
 
 ## System Requirements
 
-- NVIDIA GPU with compute capability 7.5 or higher
-- NVIDIA driver supporting CUDA 12.8 (>= 570.15)
+- NVIDIA GPU with compute capability 6.1 or higher
+- CUDA 12.8 runtime and an NVIDIA driver supporting CUDA 12.8 (>= 570.15)
 - Linux x86_64 (Ubuntu 22.04 compatible)
 
 ## Build Process

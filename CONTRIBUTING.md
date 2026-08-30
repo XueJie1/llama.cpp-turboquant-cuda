@@ -50,7 +50,7 @@ Modify the `architectures` field in the matrix. Format: semicolon-separated list
 
 ### Architecture Guidelines
 
-- **Always include** 7.5+ for wide compatibility
+- **Always include** native SM61 plus 7.5+ for wide compatibility in the CUDA 12.8 release
 - **Blackwell (10.0)** only for CUDA >= 12.8
 - Test on at least one GPU from each architecture if possible
 
