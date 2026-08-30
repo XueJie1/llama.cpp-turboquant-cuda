@@ -146,7 +146,9 @@ jobs:
 
               echo '=== Installing minimal dependencies ==='
               apt-get update -qq
-              apt-get install -y --no-install-recommends \
+              # NVIDIA's devel image holds its preinstalled NCCL packages.
+              # We intentionally replace them with the CUDA 12.8-pinned build.
+              apt-get install -y --allow-change-held-packages --no-install-recommends \
                 git cmake ninja-build build-essential libssl-dev ca-certificates \
                 'libnccl2=${{ matrix.nccl_version }}' \
                 'libnccl-dev=${{ matrix.nccl_version }}'
