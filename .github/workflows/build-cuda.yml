@@ -180,6 +180,15 @@ jobs:
                 echo 'loading.html requirement already absent; no patch needed'
               fi
 
+              echo '=== Patching TurboQuant WMMA for SM61 ==='
+              if grep -q 'defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= GGML_CUDA_CC_VOLTA' ggml/src/ggml-cuda/mmvq-tq.cu; then
+                echo 'SM61 WMMA guard already present; no patch needed'
+              else
+                git apply --check /workspace/patches/mmvq-tq-sm61.patch
+                git apply /workspace/patches/mmvq-tq-sm61.patch
+                echo 'Patched: SM61 uses DP4A/scalar fallback while SM70+ retains WMMA'
+              fi
+
               echo '=== Configuring build with Ninja ==='
               export LIBRARY_PATH=\"/usr/local/cuda/lib64/stubs\${LIBRARY_PATH:+:\$LIBRARY_PATH}\"
 

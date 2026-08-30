@@ -1,0 +1,69 @@
+diff --git a/ggml/src/ggml-cuda/mmvq-tq.cu b/ggml/src/ggml-cuda/mmvq-tq.cu
+index ac370ff..da241a3 100644
+--- a/ggml/src/ggml-cuda/mmvq-tq.cu
++++ b/ggml/src/ggml-cuda/mmvq-tq.cu
+@@ -9,7 +9,8 @@
+ #include "turbo-quant.cuh"
+ #include "convert.cuh"
+ 
+-#if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++#if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA) && \
++    (!defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= GGML_CUDA_CC_VOLTA)
+ #include <mma.h>
+ using namespace nvcuda;
+ #define GGML_CUDA_USE_WMMA
+@@ -996,6 +997,7 @@ void ggml_cuda_mul_mat_tq(ggml_backend_cuda_context & ctx,
+             }
+         } else {
+ #if defined(GGML_CUDA_USE_WMMA)
++        if (cc >= GGML_CUDA_CC_VOLTA) {
+             // Large prefill: Fused Tensor Core (WMMA) path
+             ggml_cuda_pool_alloc<float> act_buf(ctx.pool(id), n_total_elements);
+             {
+@@ -1006,7 +1008,9 @@ void ggml_cuda_mul_mat_tq(ggml_backend_cuda_context & ctx,
+                 tq_prerotate_activation<<<grid, block, 0, stream>>>(src1_d, act_buf.get(), n_total_elements);
+             }
+             launch_tq4_1s_wmma(src0_d, act_buf.get(), dst_d, ncols_x, nrows_x, ncols_dst, ncols_x, nrows_x, stream);
+-#else
++        } else
++#endif
++        {
+             for (int j = 0; j < ncols_dst; j += 8) {
+                 const int batch = min(8, ncols_dst - j);
+                 const block_q8_1 * q8_j = q8_1_buf.get() + j * stride_col_y;
+@@ -1022,7 +1026,7 @@ void ggml_cuda_mul_mat_tq(ggml_backend_cuda_context & ctx,
+                     case 8: launch_tq4_1s_multi<8>(src0_d, q8_j, dst_j, ncols_x, nrows_x, stride_col_y, stride_col_dst, stream); break;
+                 }
+             }
+-#endif
++        }
+         }
+     } else {
+         // Scalar float path: TQ3_1S (all vendors) + TQ4_1S on AMD (dp4a regresses on RDNA4).
+@@ -1059,13 +1063,16 @@ void ggml_cuda_mul_mat_tq(ggml_backend_cuda_context & ctx,
+             }
+         } else {
+ #if defined(GGML_CUDA_USE_WMMA)
++        if (cc >= GGML_CUDA_CC_VOLTA) {
+             // Large prefill: Fused Tensor Core (WMMA) path
+             if (is_tq4) {
+                 launch_tq4_1s_wmma(src0_d, act_buf.get(), dst_d, ncols_x, nrows_x, ncols_dst, ncols_x, nrows_x, stream);
+             } else {
+                 launch_tq3_1s_wmma(src0_d, act_buf.get(), dst_d, ncols_x, nrows_x, ncols_dst, ncols_x, nrows_x, stream);
+             }
+-#else
++        } else
++#endif
++        {
+             for (int j = 0; j < ncols_dst; j += 8) {
+                 const int batch = min(8, ncols_dst - j);
+                 const float * act_j = act_buf.get() + j * ncols_x;
+@@ -1081,7 +1088,7 @@ void ggml_cuda_mul_mat_tq(ggml_backend_cuda_context & ctx,
+                     case 8: LAUNCH_SCALAR(8, src0_d, act_j, dst_j); break;
+                 }
+             }
+-#endif
++        }
+         }
+         #undef LAUNCH_SCALAR
+     }
