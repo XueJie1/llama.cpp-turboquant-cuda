@@ -91,10 +91,9 @@ jobs:
           - cuda_version: '12.8.1'
             cuda_version_short: '12.8'
             cuda_tag: '12.8.1-cudnn-devel-ubuntu22.04'
-            # CUDA 12.8 nvcc covers Pascal through Blackwell. Ship sm_61 as a
-            # native cubin so Pascal hosts do not depend on a first-run PTX JIT
-            # (or on the host driver's ability to JIT CUDA 12.8 PTX).
-            architectures: '61-real;75-virtual;80-virtual;86-virtual;89-virtual;90-virtual;100-virtual;120-virtual'
+            # CUDA 12.8 nvcc covers Turing through Blackwell. Same list applies
+            # regardless of host arch since compute capability targets the GPU.
+            architectures: '75-virtual;80-virtual;86-virtual;89-virtual;90-virtual;100-virtual;120-virtual'
 
     steps:
       - name: Checkout
@@ -314,8 +313,7 @@ jobs:
             ## Build details
             - Host arch: x86_64 (amd64), Linux
             - CUDA version: 12.8.1
-            - GPU compute capabilities: 6.1, 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 12.0
-              - 6.1: Tesla P40, Titan Xp, GTX 10xx series
+            - GPU compute capabilities: 7.5, 8.0, 8.6, 8.9, 9.0, 10.0, 12.0
               - 7.5: Tesla T4, RTX 20xx series, Quadro RTX
               - 8.0: A100
               - 8.6: RTX 3000 series

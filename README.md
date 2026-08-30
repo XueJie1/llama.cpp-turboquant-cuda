@@ -6,7 +6,7 @@ This repository automatically builds [llama.cpp-turboquant](https://github.com/T
 
 The llama.cpp-turboquant project only ships macOS (Metal) and Windows (CUDA) binaries in its own releases - there is no Linux CUDA build. This repository fills that gap by:
 
-- Building llama.cpp-turboquant with CUDA support for a wide range of NVIDIA GPU architectures (compute capability 6.1+)
+- Building llama.cpp-turboquant with CUDA support for a wide range of NVIDIA GPU architectures (compute capability 7.5+)
 - Automatically tracking the `feature/turboquant-kv-cache` branch of the upstream fork
 - Providing ready-to-use Linux x86_64 binaries via GitHub Releases
 
@@ -25,7 +25,6 @@ The build targets the following GPU compute capabilities (same on the host):
 
 | Compute Capability | GPU Examples |
 |-------------------|--------------|
-| 6.1 | Tesla P40, Titan Xp, GTX 10xx series |
 | 7.5 | Tesla T4, RTX 2000 series, Quadro RTX |
 | 8.0 | A100 |
 | 8.6 | RTX 3000 series |
@@ -33,10 +32,6 @@ The build targets the following GPU compute capabilities (same on the host):
 | 9.0 | H100, H200, GH200 |
 | 10.0 | B200, GB200 |
 | 12.0 | RTX Pro series, RTX 5000 series |
-
-The sm61 target is shipped as a native cubin rather than PTX-only code. This
-avoids a first-run JIT compile on Pascal hosts and avoids relying on an older
-host driver's ability to JIT PTX produced by CUDA 12.8.
 
 ## Usage
 
@@ -76,29 +71,10 @@ Each release includes a `VERSION.txt` file recording the exact source commit, br
 cat VERSION.txt
 ```
 
-### Multiple GPUs
-
-Multi-GPU layer splitting is built into the CUDA backend. List the detected
-devices, then run across all visible GPUs:
-
-```bash
-./llama-server --list-devices
-./llama-server -m model.gguf -ngl all -sm layer
-```
-
-For equal GPUs, an explicit split such as `-ts 1,1` is optional. For unequal
-GPUs, set a ratio that reflects available VRAM, for example `-ts 3,1`, or omit
-it and let llama.cpp choose automatically.
-
-Tensor parallelism (`-sm tensor`) is experimental and performs best with NCCL.
-NCCL is not bundled in these release tarballs, so use layer splitting unless
-the host provides a compatible NCCL runtime and the build log confirms that
-NCCL was found.
-
 ## System Requirements
 
-- NVIDIA GPU with compute capability 6.1 or higher
-- NVIDIA driver supporting CUDA 12.8.1 (>= 570.124.06 recommended)
+- NVIDIA GPU with compute capability 7.5 or higher
+- NVIDIA driver supporting CUDA 12.8 (>= 570.15)
 - Linux x86_64 (Ubuntu 22.04 compatible)
 
 ## Build Process
